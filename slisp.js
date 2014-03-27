@@ -17,7 +17,7 @@ var specials = {
   
   "begin": function(x, env) {
     var val;
-    x[1].forEach(function(exp){
+    [].slice.call(x, 1).forEach(function(exp){
       val = eval(exp, env);
     });
     return val;
