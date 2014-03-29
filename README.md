@@ -17,9 +17,28 @@ It is much easier to work with if you use rlwrap, which you can install on mac v
   
 ##Examples
 
+###DataTypes
+
+  * boolean #t = true, #f = false
+  * string
+  * number
+  
+###Multiple args
+
+    > (+ 3 2 3)
+    8
+    
+###Multi-line
+
+    > (def myfun (^ (n)
+    >   (+ 3 n)))
+    [Function]
+    > (myfun 3)
+    6
+
 ###Closure
 
-    > (def addx (lambda (x) (lambda (y) (+ x y))))
+    > (def addx (^ (x) (^ (y) (+ x y))))
     [Function]
     > (def add5 (addx 5))
     [Function]

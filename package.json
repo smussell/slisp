@@ -4,6 +4,7 @@
   "description": "",
   "main": "slisp.js",
   "dependencies": {
-    "sync-prompt": "*"
+    "sync-prompt": "*",
+    "when":"*"
   }
 }

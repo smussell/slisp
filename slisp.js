@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 
-var TOKEN_REGEX = /(\(|\))/g,
+var string = require('./string'),
+    Reader = require('./reader'),
+    when = require('when');
+
+var TOKEN_REGEX = /\s*(,@|[('`,)]|"(?:[\\].|[^\\"])*"|;.*|[^\s('"`,;)]*)(.*)/,
     NUMBER = /^-?\d+\.?\d*$/g;
 
 var Symbol = function(val){ this.val = val; },
@@ -78,29 +82,26 @@ function eval(x, env) {
   }
 }
 
-function tokenize(s) {
-  return s.replace(TOKEN_REGEX, ' $1 ').trim().split(' ').reverse().filter(function(d){ return d !== ''; });
-}
-
-function parse(tokens) {
-  if(!tokens.length) throw "unexpected EOF"
-  var tok = tokens.pop();
-  switch(tok) {
-    case '(':
+function parse(reader) {
+  function unspool(tok) {
+    var defer = when.defer();
+    if(tok === '(') {
       var newList = [];
-      while(tokens[tokens.length-1] !== ')') {
-        newList.push(parse(tokens));
-      }
-      tokens.pop();
-      return newList;
-    case ')':
-      throw "unexpected";
-    default:
-      return atom(tok);
+      when.iterate(
+          function(d) { return reader.nextToken(); },
+          function(d) { return d === ')'; },
+          function(d) { return unspool(d).then(function(v){ return newList.push(v);}); },
+          reader.nextToken())
+        .done(function(d){ defer.resolve(newList); });
+    } else if(tok === ')') {
+      throw 'unexpcted'
+    } else {
+      defer.resolve(atom(tok));
+    }
+    return defer.promise;
   }
+  return reader.nextToken().then(unspool);
 }
-
-String.prototype.startsWith = function(s){ return this.indexOf(s) === 0; };
 
 function atom(token) {
   if(token === "#t") return true;
@@ -110,16 +111,16 @@ function atom(token) {
   return num !== null ? +num[0] : Sym(token);
 }
 
-var prompt = require('sync-prompt').prompt;
-var globalEnv = Env([], [], globals());
+var prompt = require('sync-prompt').prompt,
+    globalEnv = Env([], [], globals()),
+    reader = Reader().port(process.stdin);
+    
 function run() {
-  while(true) {
-    var input = prompt('> ');
-    if(input) {
-      var parsed = parse(tokenize(input));
-      console.log(eval(parsed, globalEnv));
-    }
-  }
+  parse(reader).then( function(val) { 
+    console.log(eval(val, globalEnv));
+    run();
+  }).catch(console.log.bind(console));
 }
-
+process.stdin.resume();
+process.stdin.setEncoding('utf8');
 run();
